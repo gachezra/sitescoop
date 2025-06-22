@@ -4,17 +4,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, Zap, Shield,Gauge } from "lucide-react";
+import { ArrowRight, Search, Zap, Shield,Gauge, FileText, Link, Image } from "lucide-react";
 import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
+  contentType: z.enum(['text', 'links', 'images'], { required_error: "Please select a content type."}),
 });
 
 type ScraperFormProps = {
-  onScrape: (url: string) => void;
+  onScrape: (values: z.infer<typeof formSchema>) => void;
   isScraping: boolean;
 };
 
@@ -32,46 +34,72 @@ export default function ScraperForm({ onScrape, isScraping }: ScraperFormProps) 
     resolver: zodResolver(formSchema),
     defaultValues: {
       url: "",
+      contentType: "text",
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onScrape(values.url);
+    onScrape(values);
   }
 
   return (
     <div className="bg-card/60 backdrop-blur-lg border border-white/20 shadow-lg rounded-xl p-6 md:p-8 text-center">
       <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-        Scrape Any Website in Seconds
+        Extract Any Content in Seconds
       </h2>
       <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
-        No registration required. Just enter a URL, and our AI-powered engine will extract the data you need.
+        No registration required. Just enter a URL, choose what to extract, and get the raw data you need.
       </p>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="max-w-2xl mx-auto space-y-4">
-          <FormField
-            control={form.control}
-            name="url"
-            render={({ field }) => (
-              <FormItem>
-                <FormControl>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      placeholder="https://example.com"
-                      {...field}
-                      className="pl-10 h-12 text-lg"
-                      disabled={isScraping}
-                    />
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid md:grid-cols-3 gap-4">
+            <FormField
+              control={form.control}
+              name="url"
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel className="sr-only">URL</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                      <Input
+                        placeholder="https://example.com"
+                        {...field}
+                        className="pl-10 h-12 text-lg"
+                        disabled={isScraping}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="contentType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="sr-only">Content Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isScraping}>
+                        <FormControl>
+                            <SelectTrigger className="h-12 text-lg">
+                                <SelectValue placeholder="Select content type..." />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="text"><FileText className="inline-block mr-2 h-4 w-4" />All Text</SelectItem>
+                            <SelectItem value="links"><Link className="inline-block mr-2 h-4 w-4" />All Links</SelectItem>
+                            <SelectItem value="images"><Image className="inline-block mr-2 h-4 w-4" />All Images</SelectItem>
+                        </SelectContent>
+                    </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           <Button type="submit" size="lg" className="w-full h-12 text-lg" disabled={isScraping}>
-            {isScraping ? 'Scraping...' : 'Scrape Now'}
+            {isScraping ? 'Extracting...' : 'Extract Now'}
             {!isScraping && <ArrowRight className="ml-2 h-5 w-5" />}
           </Button>
         </form>

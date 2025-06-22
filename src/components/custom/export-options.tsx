@@ -3,90 +3,65 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, Mail, FileText, FileSpreadsheet, Gem, Sparkles, Loader2 } from "lucide-react";
+import { Download, Mail, Sparkles, Loader2, Gem } from "lucide-react";
 import PaymentModal from './payment-modal';
-import type { Product } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import type { ScrapedData } from '@/app/actions';
 
 type ExportOptionsProps = {
-  data: Product[];
+  data: ScrapedData;
   onCleanData: () => Promise<void>;
   isCleaning: boolean;
 };
 
 export default function ExportOptions({ data, onCleanData, isCleaning }: ExportOptionsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [premiumFeature, setPremiumFeature] = useState('');
-  const [actionToConfirm, setActionToConfirm] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handlePremiumAction = (feature: string, action: string) => {
-    setPremiumFeature(feature);
-    setActionToConfirm(action);
+  const handleCleanAction = () => {
     setIsModalOpen(true);
   };
 
   const handleSuccessfulPayment = () => {
     setIsModalOpen(false); 
-    if (actionToConfirm === 'clean') {
-      onCleanData(); 
-    } else if (actionToConfirm === 'pdf') {
-      toast({
-        title: 'Payment Successful!',
-        description: `You have unlocked PDF export. Your download will start shortly.`,
-        className: 'bg-green-500 text-white',
-      });
-    } else if (actionToConfirm === 'excel') {
-      toast({
-        title: 'Payment Successful!',
-        description: `You have unlocked Excel export. Your download will start shortly.`,
-        className: 'bg-green-500 text-white',
-      });
+    onCleanData(); 
+  };
+
+  const convertToText = (dataToConvert: ScrapedData): string => {
+    if (!dataToConvert || !dataToConvert.data) return '';
+    if (Array.isArray(dataToConvert.data)) {
+      return dataToConvert.data.join('\n');
     }
-    setActionToConfirm(null);
+    return dataToConvert.data;
   };
 
-  const convertToCSV = (dataToConvert: Product[]): string => {
-    if (!dataToConvert || dataToConvert.length === 0) return '';
-    const headers = Object.keys(dataToConvert[0]);
-    const csvRows = [
-      headers.join(','), 
-      ...dataToConvert.map(row =>
-        headers.map(fieldName =>
-          JSON.stringify(row[fieldName as keyof Product] || '', (key, value) =>
-            value === null ? '' : value
-          )
-        ).join(',')
-      )
-    ];
-    return csvRows.join('\n');
-  };
-
-  const handleDownloadCsv = () => {
-    const csvData = convertToCSV(data.slice(0, 100));
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+  const handleDownload = () => {
+    const textData = convertToText(data);
+    const blob = new Blob([textData], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
+    const fileExtension = data.contentType === 'text' ? 'txt' : 'csv';
     link.setAttribute('href', url);
-    link.setAttribute('download', 'sitescoop_data.csv');
+    link.setAttribute('download', `sitescoop_data.${fileExtension}`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     toast({
         title: 'Download Started',
-        description: 'Your CSV file is being downloaded.',
+        description: `Your ${fileExtension.toUpperCase()} file is being downloaded.`,
     });
   };
 
-  const handleEmailCsv = () => {
+  const handleEmail = () => {
      toast({
         title: 'Email Client Opening',
         description: 'A new email draft will be created with your data.',
     });
-    const subject = encodeURIComponent("Scraped Data from SiteScoop");
+    const subject = encodeURIComponent("Extracted Data from SiteScoop");
+    const bodyText = convertToText(data);
     const body = encodeURIComponent(
-        `Here is the data you scraped, with SiteScoop branding.\n\n${convertToCSV(data.slice(0,10))}\n\n... and more.\n\nUnlock full data exports with SiteScoop Premium!`
+        `Here is the data you extracted with SiteScoop:\n\n${bodyText.substring(0, 1000)}...\n\nGet full, cleaned data with SiteScoop!`
     );
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
@@ -95,46 +70,25 @@ export default function ExportOptions({ data, onCleanData, isCleaning }: ExportO
     <>
       <Card className="bg-card/60 backdrop-blur-lg border border-white/20 shadow-lg">
         <CardHeader>
-          <CardTitle>Export Your Data</CardTitle>
-          <CardDescription>Download, email, or clean your scraped data.</CardDescription>
+          <CardTitle>Next Steps</CardTitle>
+          <CardDescription>Download, email, or use AI to clean your extracted data.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {/* Free Options */}
-          <Button variant="outline" size="lg" className="flex-col h-24" onClick={handleDownloadCsv}>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Button variant="outline" size="lg" className="flex-col h-24" onClick={handleDownload}>
             <Download className="h-8 w-8 mb-2" />
-            <span className="font-semibold">Download CSV</span>
-            <span className="text-xs text-muted-foreground">First 100 rows</span>
+            <span className="font-semibold">Download Data</span>
+            <span className="text-xs text-muted-foreground">.txt or .csv file</span>
           </Button>
-          <Button variant="outline" size="lg" className="flex-col h-24" onClick={handleEmailCsv}>
+          <Button variant="outline" size="lg" className="flex-col h-24" onClick={handleEmail}>
             <Mail className="h-8 w-8 mb-2" />
-            <span className="font-semibold">Email CSV</span>
-            <span className="text-xs text-muted-foreground">With SiteScoop branding</span>
-          </Button>
-
-          {/* Premium Options */}
-          <Button variant="outline" size="lg" className="flex-col h-24 relative overflow-hidden group" onClick={() => handlePremiumAction('PDF Export', 'pdf')}>
-            <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-bl-lg flex items-center gap-1">
-              <Gem className="h-3 w-3" />
-              <span>PREMIUM</span>
-            </div>
-            <FileText className="h-8 w-8 mb-2 text-primary" />
-            <span className="font-semibold">Export as PDF</span>
-            <span className="text-xs text-muted-foreground">Full, formatted report</span>
-          </Button>
-          <Button variant="outline" size="lg" className="flex-col h-24 relative overflow-hidden group" onClick={() => handlePremiumAction('Excel Export', 'excel')}>
-            <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-bl-lg flex items-center gap-1">
-                <Gem className="h-3 w-3" />
-                <span>PREMIUM</span>
-            </div>
-            <FileSpreadsheet className="h-8 w-8 mb-2 text-primary" />
-            <span className="font-semibold">Export as Excel</span>
-            <span className="text-xs text-muted-foreground">Multiple sheets, full data</span>
+            <span className="font-semibold">Email Data</span>
+            <span className="text-xs text-muted-foreground">Share via email client</span>
           </Button>
           <Button 
             variant="outline" 
             size="lg" 
             className="flex-col h-24 relative overflow-hidden group" 
-            onClick={() => handlePremiumAction('AI Data Cleaning', 'clean')}
+            onClick={handleCleanAction}
             disabled={isCleaning}
           >
             <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs px-2 py-0.5 rounded-bl-lg flex items-center gap-1">
@@ -150,7 +104,7 @@ export default function ExportOptions({ data, onCleanData, isCleaning }: ExportO
       <PaymentModal
         isOpen={isModalOpen}
         setIsOpen={setIsModalOpen}
-        feature={premiumFeature}
+        feature="AI Data Cleaning"
         onSuccessfulPayment={handleSuccessfulPayment}
       />
     </>

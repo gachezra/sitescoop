@@ -4,11 +4,10 @@ import { useState, useMemo } from "react";
 import Header from "@/components/custom/header";
 import ScraperForm from "@/components/custom/scraper-form";
 import ProgressIndicator from "@/components/custom/progress-indicator";
-import { performScrape, performDataCleaning } from "@/app/actions";
+import { extractContent, performDataCleaning } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
-import { Product } from "@/types";
-import { DataTable } from "./data-table";
-import { generateColumns } from "./data-table-columns";
+import type { ScrapedData, ContentType } from "@/app/actions";
+import ResultsView from "./results-view";
 import ExportOptions from "./export-options";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -18,32 +17,28 @@ type ScraperState = 'idle' | 'scraping' | 'results' | 'error';
 
 export default function ScraperClient() {
   const [state, setState] = useState<ScraperState>("idle");
-  const [url, setUrl] = useState("");
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
-  const [scrapedData, setScrapedData] = useState<Product[]>([]);
-  const [summary, setSummary] = useState<string>('');
+  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isCleaning, setIsCleaning] = useState(false);
 
   const { toast } = useToast();
 
-  const handleScrape = async (scrapeUrl: string) => {
-    setUrl(scrapeUrl);
+  const handleScrape = async ({ url, contentType }: { url: string, contentType: ContentType }) => {
     setState('scraping');
     setProgress(0);
-    setStatusMessage("Initializing scraping engine...");
-    setScrapedData([]);
-    setSummary('');
+    setStatusMessage("Initializing extraction engine...");
+    setScrapedData(null);
     setErrorMessage('');
 
     const progressInterval = setInterval(() => {
         setProgress(p => Math.min(p + 5, 95));
-    }, 500);
+    }, 300);
 
     try {
-      setStatusMessage("Fetching page and analyzing content with AI...");
-      const result = await performScrape(scrapeUrl);
+      setStatusMessage("Fetching page and extracting content...");
+      const result = await extractContent(url, contentType);
       clearInterval(progressInterval);
 
       if (result.error) {
@@ -51,20 +46,19 @@ export default function ScraperClient() {
         setState('error');
         toast({
           variant: "destructive",
-          title: "Scraping Failed",
+          title: "Extraction Failed",
           description: result.error,
         });
         return;
       }
       
-      if(result.data && result.summary) {
+      if(result.data) {
         setScrapedData(result.data);
-        setSummary(result.summary);
         setProgress(100);
-        setStatusMessage("Scraping complete!");
+        setStatusMessage("Extraction complete!");
         setState('results');
       } else {
-        setErrorMessage("Scraping finished, but returned no data or summary.");
+        setErrorMessage("Extraction finished, but returned no data.");
         setState('error');
       }
 
@@ -76,14 +70,14 @@ export default function ScraperClient() {
       setState('error');
       toast({
         variant: "destructive",
-        title: "Scraping Failed",
+        title: "Extraction Failed",
         description: message,
       });
     }
   };
 
   const handleCleanData = async () => {
-    if (scrapedData.length === 0) {
+    if (!scrapedData) {
         toast({
             variant: "destructive",
             title: "No Data",
@@ -108,10 +102,10 @@ export default function ScraperClient() {
                 description: result.error,
             });
         } else if (result.cleanedData) {
-            setScrapedData(result.cleanedData);
+            setScrapedData({ ...scrapedData, data: result.cleanedData });
             toast({
                 title: "Data Cleaned Successfully!",
-                description: "The data table has been updated.",
+                description: "The results have been updated.",
                 className: 'bg-green-500 text-white',
             });
         }
@@ -129,16 +123,13 @@ export default function ScraperClient() {
     
   const handleStartNewScrape = () => {
     setState('idle');
-    setScrapedData([]);
-    setUrl("");
+    setScrapedData(null);
     setProgress(0);
     setStatusMessage("");
     setErrorMessage("");
   };
 
   const isProcessing = state === 'scraping' || isCleaning;
-
-  const columns = useMemo(() => generateColumns(scrapedData), [scrapedData]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -164,12 +155,10 @@ export default function ScraperClient() {
                 <ProgressIndicator progress={progress} message={statusMessage} />
             )}
 
-            {state === 'results' && scrapedData.length > 0 && (
+            {state === 'results' && scrapedData && (
                 <div className="space-y-8 animate-in fade-in duration-500">
-                    <DataTable 
-                        columns={columns} 
-                        data={scrapedData} 
-                        summary={summary} 
+                    <ResultsView
+                        scrapedData={scrapedData} 
                         onNewScrape={handleStartNewScrape}
                         isProcessing={isProcessing}
                     />
