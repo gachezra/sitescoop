@@ -4,6 +4,7 @@ export type Product = {
   description: string;
   link: string;
   imageUrl: string;
+  date?: string;
 };
 
 export type SelectorMap = {

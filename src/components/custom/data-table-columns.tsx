@@ -3,10 +3,11 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Product } from "@/types";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, CalendarDays } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
 import Link from "next/link";
+import { Badge } from "../ui/badge";
 
 export const columns: ColumnDef<Product>[] = [
   {
@@ -56,8 +57,8 @@ export const columns: ColumnDef<Product>[] = [
                     className="rounded-md object-cover aspect-square"
                     data-ai-hint="item image"
                 />
-                <div className="flex flex-col gap-1">
-                  <Link href={item.link || '#'} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+                <div className="flex flex-col gap-1.5">
+                  <Link href={item.link || '#'} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline leading-tight">
                     {item.title}
                   </Link>
                   <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
@@ -67,4 +68,30 @@ export const columns: ColumnDef<Product>[] = [
     },
     size: 60, // Set a larger size for this column
   },
+  {
+    accessorKey: "date",
+    header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Date
+            <ArrowUpDown className="ml-2 h-4 w-4" />
+          </Button>
+        )
+      },
+    cell: ({ row }) => {
+        const date = row.original.date;
+        if (!date) return null;
+        
+        return (
+            <Badge variant="outline" className="font-mono whitespace-nowrap">
+                <CalendarDays className="mr-2 h-4 w-4" />
+                {date}
+            </Badge>
+        )
+    },
+    size: 20,
+  }
 ];

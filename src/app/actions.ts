@@ -2,7 +2,7 @@
 
 import { suggestSelectors } from '@/ai/flows/ai-selector-suggestions';
 import { summarizeData } from '@/ai/flows/data-summarization';
-import type { SelectorMap, Product } from '@/types';
+import type { Product } from '@/types';
 import * as cheerio from 'cheerio';
 
 export async function performScrape(url: string): Promise<{
@@ -32,6 +32,7 @@ export async function performScrape(url: string): Promise<{
         $(selectors.container).each((index, element) => {
           const title = $(element).find(selectors.title).text().trim();
           const description = $(element).find(selectors.description).text().trim();
+          const date = selectors.date ? $(element).find(selectors.date).text().trim() : undefined;
           
           let link = $(element).find(selectors.link).attr('href') || '';
           if (link) {
@@ -59,7 +60,8 @@ export async function performScrape(url: string): Promise<{
                 title,
                 description,
                 link,
-                imageUrl: imageUrl || `https://placehold.co/100x100.png`
+                imageUrl: imageUrl || `https://placehold.co/100x100.png`,
+                date
             });
           }
         });

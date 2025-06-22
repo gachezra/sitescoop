@@ -23,6 +23,7 @@ const SuggestSelectorsOutputSchema = z.object({
   description: z.string().describe('The CSS selector for the item description, relative to the container.'),
   link: z.string().describe("The CSS selector for the link to the item's detail page, relative to the container."),
   imageUrl: z.string().describe('The CSS selector for the item image, relative to the container.'),
+  date: z.string().optional().describe('The CSS selector for the item date, relative to the container.'),
 });
 export type SuggestSelectorsOutput = z.infer<typeof SuggestSelectorsOutputSchema>;
 
@@ -36,13 +37,13 @@ const prompt = ai.definePrompt({
   output: {schema: SuggestSelectorsOutputSchema},
   prompt: `You are an expert web scraper. Given the URL and HTML content of a webpage, suggest CSS selectors to extract a list of items.
 
-Identify a repeating container element for each item. Then, within that container, find the selectors for the title, a description, a link to the item's page, and an image URL.
+Identify a repeating container element for each item. Then, within that container, find the selectors for the title, a description, a link to the item's page, an image URL, and a date if available.
 
 URL: {{{url}}}
 Content:
 {{{content}}}
 
-Return the selectors as a JSON object with keys "container", "title", "description", "link", and "imageUrl". The selectors for title, description, link and imageUrl should be relative to the container.
+Return the selectors as a JSON object with keys "container", "title", "description", "link", "imageUrl", and "date". The selectors for title, description, link, imageUrl, and date should be relative to the container.
 `,
 });
 

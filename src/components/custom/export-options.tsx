@@ -5,14 +5,66 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Download, Mail, FileText, FileSpreadsheet, Gem } from "lucide-react";
 import PaymentModal from './payment-modal';
+import type { Product } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
-export default function ExportOptions() {
+type ExportOptionsProps = {
+  data: Product[];
+};
+
+export default function ExportOptions({ data }: ExportOptionsProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [premiumFeature, setPremiumFeature] = useState('');
+  const { toast } = useToast();
 
   const handlePremiumExport = (feature: 'PDF' | 'Excel') => {
     setPremiumFeature(feature);
     setIsModalOpen(true);
+  };
+
+  const convertToCSV = (dataToConvert: Product[]): string => {
+    if (!dataToConvert || dataToConvert.length === 0) return '';
+    const headers = Object.keys(dataToConvert[0]);
+    const csvRows = [
+      headers.join(','), // header row
+      ...dataToConvert.map(row =>
+        headers.map(fieldName =>
+          JSON.stringify(row[fieldName as keyof Product] || '', (key, value) =>
+            value === null ? '' : value
+          )
+        ).join(',')
+      )
+    ];
+    return csvRows.join('\n');
+  };
+
+  const handleDownloadCsv = () => {
+    const csvData = convertToCSV(data.slice(0, 100));
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'sitescoop_data.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({
+        title: 'Download Started',
+        description: 'Your CSV file is being downloaded.',
+    });
+  };
+
+  const handleEmailCsv = () => {
+     toast({
+        title: 'Email Client Opening',
+        description: 'A new email draft will be created with your data.',
+    });
+    const subject = encodeURIComponent("Scraped Data from SiteScoop");
+    const body = encodeURIComponent(
+        `Here is the data you scraped, with SiteScoop branding.\n\n${convertToCSV(data.slice(0,10))}\n\n... and more.\n\nUnlock full data exports with SiteScoop Premium!`
+    );
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
 
   return (
@@ -24,12 +76,12 @@ export default function ExportOptions() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Free Options */}
-          <Button variant="outline" size="lg" className="flex-col h-24">
+          <Button variant="outline" size="lg" className="flex-col h-24" onClick={handleDownloadCsv}>
             <Download className="h-8 w-8 mb-2" />
             <span className="font-semibold">Download CSV</span>
             <span className="text-xs text-muted-foreground">First 100 rows</span>
           </Button>
-          <Button variant="outline" size="lg" className="flex-col h-24">
+          <Button variant="outline" size="lg" className="flex-col h-24" onClick={handleEmailCsv}>
             <Mail className="h-8 w-8 mb-2" />
             <span className="font-semibold">Email CSV</span>
             <span className="text-xs text-muted-foreground">With SiteScoop branding</span>

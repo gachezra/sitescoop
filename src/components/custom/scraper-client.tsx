@@ -124,7 +124,7 @@ export default function ScraperClient() {
                         summary={summary} 
                         onNewScrape={handleStartNewScrape}
                     />
-                    <ExportOptions />
+                    <ExportOptions data={scrapedData} />
                 </div>
             )}
         </div>
