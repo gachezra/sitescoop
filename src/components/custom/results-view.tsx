@@ -1,10 +1,20 @@
 'use client';
 
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Filter, Code, Table as TableIcon } from "lucide-react";
 import Image from "next/image";
 import type { ScrapedData } from "@/app/actions";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type ResultsViewProps = {
   scrapedData: ScrapedData;
@@ -14,6 +24,32 @@ type ResultsViewProps = {
 
 export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: ResultsViewProps) {
   const { contentType, data, url } = scrapedData;
+
+  const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
+  const initialSelectedTables = useMemo(() => {
+    if (contentType === 'tables' && Array.isArray(data)) {
+      return Array.from({ length: data.length }, (_, i) => i);
+    }
+    return [];
+  }, [contentType, data]);
+
+  const [selectedTables, setSelectedTables] = useState<number[]>(initialSelectedTables);
+
+  const handleTableSelectionChange = (index: number) => {
+    setSelectedTables(prev => 
+      prev.includes(index) 
+        ? prev.filter(i => i !== index) 
+        : [...prev, index].sort((a, b) => a - b)
+    );
+  };
+  
+  const filteredTableData = useMemo(() => {
+    if (contentType !== 'tables' || !Array.isArray(data)) {
+      return [];
+    }
+    return data.filter((_, index) => selectedTables.includes(index));
+  }, [data, selectedTables, contentType]);
+
 
   const renderContent = () => {
     switch (contentType) {
@@ -30,7 +66,6 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
               {(data as string[]).map((link, index) => {
                 let absoluteLink = link;
                 try {
-                  // Link should already be absolute from the action, but this is a fallback.
                   absoluteLink = new URL(link, url).href;
                 } catch (e) {
                   // keep original if invalid
@@ -52,7 +87,6 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
             {(data as string[]).map((imgSrc, index) => {
                 let absoluteSrc = imgSrc;
                 try {
-                    // Src should already be absolute from the action, but this is a fallback.
                     absoluteSrc = new URL(imgSrc, url).href;
                 } catch(e) {
                     // keep original
@@ -74,23 +108,74 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
           </div>
         );
       case 'tables':
+        const allTables = data as string[][][];
         return (
-          <div className="max-h-[600px] overflow-y-auto space-y-6 p-1">
-            {(data as string[][][]).map((table, tableIndex) => (
-              <div key={tableIndex} className="overflow-x-auto rounded-md border">
-                <table className="w-full text-sm table-auto">
-                  <tbody>
-                    {table.map((row, rowIndex) => (
-                      <tr key={rowIndex} className="border-b last:border-b-0 bg-white/5 even:bg-white/10">
-                        {row.map((cell, cellIndex) => (
-                          <td key={cellIndex} className="p-2 align-top border-r last:border-r-0">{cell}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          <div>
+            <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
+               <Tabs defaultValue="table" value={viewMode} onValueChange={(value) => setViewMode(value as 'table' | 'json')} className="w-auto">
+                <TabsList>
+                  <TabsTrigger value="table"><TableIcon className="mr-2 h-4 w-4" />Table View</TabsTrigger>
+                  <TabsTrigger value="json"><Code className="mr-2 h-4 w-4" />JSON View</TabsTrigger>
+                </TabsList>
+              </Tabs>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <Filter className="mr-2 h-4 w-4" />
+                    Showing {selectedTables.length} of {allTables.length} tables
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuLabel>Visible Tables</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {allTables.map((_, index) => (
+                     <DropdownMenuCheckboxItem
+                        key={index}
+                        checked={selectedTables.includes(index)}
+                        onCheckedChange={() => handleTableSelectionChange(index)}
+                      >
+                        Table {index + 1}
+                      </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            
+            {viewMode === 'table' ? (
+                <div className="max-h-[600px] overflow-y-auto space-y-6 p-1">
+                  {filteredTableData.length > 0 ? (
+                    filteredTableData.map((table) => {
+                      const originalIndex = allTables.findIndex(t => t === table);
+                      return (
+                        <div key={originalIndex} className="overflow-x-auto rounded-md border">
+                            <div className="p-2 bg-muted/50 font-semibold text-sm border-b">Table {originalIndex + 1}</div>
+                            <table className="w-full text-sm table-auto">
+                                <tbody>
+                                {table.map((row, rowIndex) => (
+                                    <tr key={rowIndex} className="border-b last:border-b-0 bg-white/5 even:bg-white/10">
+                                    {row.map((cell, cellIndex) => (
+                                        <td key={cellIndex} className="p-2 align-top border-r last:border-r-0">{cell}</td>
+                                    ))}
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="text-center text-muted-foreground p-8 rounded-md bg-muted/50">
+                        No tables selected. Use the filter to display tables.
+                    </div>
+                  )}
+                </div>
+            ) : (
+              <div className="max-h-[600px] overflow-y-auto bg-muted/50 rounded-md">
+                <pre className="p-4 text-xs font-mono whitespace-pre-wrap">
+                  {filteredTableData.length > 0 ? JSON.stringify(filteredTableData, null, 2) : "[]"}
+                </pre>
               </div>
-            ))}
+            )}
           </div>
         );
       default:
