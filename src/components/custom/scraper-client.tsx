@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Header from "@/components/custom/header";
 import ScraperForm from "@/components/custom/scraper-form";
 import ProgressIndicator from "@/components/custom/progress-indicator";
@@ -22,8 +22,35 @@ export default function ScraperClient() {
   const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isCleaning, setIsCleaning] = useState(false);
+  const [selectedTables, setSelectedTables] = useState<number[]>([]);
 
   const { toast } = useToast();
+
+  const allTables = useMemo(() => {
+    if (scrapedData?.contentType === 'tables' && Array.isArray(scrapedData.data)) {
+      return scrapedData.data as string[][][];
+    }
+    return [];
+  }, [scrapedData]);
+
+  // When new table data arrives, select all tables by default
+  useEffect(() => {
+    if (scrapedData?.contentType === 'tables') {
+      const allTableIndexes = Array.from({ length: allTables.length }, (_, i) => i);
+      setSelectedTables(allTableIndexes);
+    } else {
+      setSelectedTables([]);
+    }
+  }, [scrapedData, allTables]);
+
+
+  const dataToExport = useMemo(() => {
+    if (scrapedData?.contentType === 'tables') {
+      return allTables.filter((_, index) => selectedTables.includes(index));
+    }
+    return scrapedData?.data;
+  }, [scrapedData, allTables, selectedTables]);
+
 
   const handleScrape = async ({ url, contentType }: { url: string, contentType: ContentType }) => {
     setState('scraping');
@@ -31,6 +58,7 @@ export default function ScraperClient() {
     setStatusMessage("Initializing extraction engine...");
     setScrapedData(null);
     setErrorMessage('');
+    setSelectedTables([]);
 
     const progressInterval = setInterval(() => {
         setProgress(p => Math.min(p + 5, 95));
@@ -93,7 +121,8 @@ export default function ScraperClient() {
     });
 
     try {
-        const result = await performDataCleaning(scrapedData);
+        const dataForCleaning = { ...scrapedData, data: dataToExport };
+        const result = await performDataCleaning(dataForCleaning);
 
         if (result.error) {
             toast({
@@ -102,7 +131,24 @@ export default function ScraperClient() {
                 description: result.error,
             });
         } else if (result.cleanedData) {
-            setScrapedData({ ...scrapedData, data: result.cleanedData });
+            // Create a new data object that respects the original structure
+            let updatedData;
+            if (scrapedData.contentType === 'tables') {
+                 // The AI returns cleaned data for the selection. We need to merge it back
+                 // into the full dataset for consistent state representation.
+                 const cleanedTables = result.cleanedData as string[][][];
+                 let cleanedIndex = 0;
+                 updatedData = allTables.map((originalTable, index) => {
+                    if (selectedTables.includes(index)) {
+                        return cleanedTables[cleanedIndex++];
+                    }
+                    return originalTable;
+                 });
+            } else {
+                updatedData = result.cleanedData;
+            }
+
+            setScrapedData({ ...scrapedData, data: updatedData });
             toast({
                 title: "Data Cleaned Successfully!",
                 description: "The results have been updated.",
@@ -161,9 +207,14 @@ export default function ScraperClient() {
                         scrapedData={scrapedData} 
                         onNewScrape={handleStartNewScrape}
                         isProcessing={isProcessing}
+                        selectedTables={selectedTables}
+                        onSelectedTablesChange={setSelectedTables}
+                        allTables={allTables}
+                        filteredTableData={dataToExport}
                     />
                     <ExportOptions 
-                      data={scrapedData} 
+                      scrapedData={scrapedData}
+                      dataToExport={dataToExport}
                       onCleanData={handleCleanData}
                       isCleaning={isCleaning}
                     />

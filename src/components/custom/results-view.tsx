@@ -16,47 +16,43 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ScrollArea } from '../ui/scroll-area';
 
 type ResultsViewProps = {
   scrapedData: ScrapedData;
   onNewScrape: () => void;
   isProcessing?: boolean;
+  selectedTables: number[];
+  onSelectedTablesChange: React.Dispatch<React.SetStateAction<number[]>>;
+  allTables: string[][][];
+  filteredTableData: any;
 };
 
-export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: ResultsViewProps) {
+export default function ResultsView({ 
+  scrapedData, 
+  onNewScrape, 
+  isProcessing,
+  selectedTables,
+  onSelectedTablesChange,
+  allTables,
+  filteredTableData
+}: ResultsViewProps) {
   const { contentType, data, url } = scrapedData;
 
   const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
   
-  const allTables = useMemo(() => {
-    if (contentType === 'tables' && Array.isArray(data)) {
-      return data as string[][][];
-    }
-    return [];
-  }, [contentType, data]);
-
   const allTableIndexes = useMemo(() => Array.from({ length: allTables.length }, (_, i) => i), [allTables]);
   
-  const [selectedTables, setSelectedTables] = useState<number[]>(allTableIndexes);
-
   const handleTableSelectionChange = (index: number) => {
-    setSelectedTables(prev => 
+    onSelectedTablesChange(prev => 
       prev.includes(index) 
         ? prev.filter(i => i !== index) 
         : [...prev, index].sort((a, b) => a - b)
     );
   };
 
-  const handleSelectAll = () => setSelectedTables(allTableIndexes);
-  const handleSelectNone = () => setSelectedTables([]);
-  
-  const filteredTableData = useMemo(() => {
-    if (contentType !== 'tables') {
-      return [];
-    }
-    return allTables.filter((_, index) => selectedTables.includes(index));
-  }, [allTables, selectedTables, contentType]);
-
+  const handleSelectAll = () => onSelectedTablesChange(allTableIndexes);
+  const handleSelectNone = () => onSelectedTablesChange([]);
 
   const renderContent = () => {
     switch (contentType) {
@@ -131,21 +127,23 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
                     Showing {selectedTables.length} of {allTables.length} tables
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 max-h-96">
+                <DropdownMenuContent className="w-56" align="end">
                   <DropdownMenuLabel>Visible Tables</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={handleSelectAll}>Select All</DropdownMenuItem>
                   <DropdownMenuItem onSelect={handleSelectNone}>Select None</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  {allTables.map((_, index) => (
-                     <DropdownMenuCheckboxItem
-                        key={index}
-                        checked={selectedTables.includes(index)}
-                        onCheckedChange={() => handleTableSelectionChange(index)}
-                      >
-                        Table {index + 1}
-                      </DropdownMenuCheckboxItem>
-                  ))}
+                  <ScrollArea className="h-60">
+                    {allTables.map((_, index) => (
+                       <DropdownMenuCheckboxItem
+                          key={index}
+                          checked={selectedTables.includes(index)}
+                          onCheckedChange={() => handleTableSelectionChange(index)}
+                        >
+                          Table {index + 1}
+                        </DropdownMenuCheckboxItem>
+                    ))}
+                  </ScrollArea>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -153,7 +151,7 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
             {viewMode === 'table' ? (
                 <div className="max-h-[600px] overflow-y-auto space-y-6 p-1">
                   {filteredTableData.length > 0 ? (
-                    filteredTableData.map((table) => {
+                    filteredTableData.map((table: string[][]) => {
                       const originalIndex = allTables.findIndex(t => t === table);
                       return (
                         <div key={originalIndex} className="overflow-x-auto rounded-md border">
