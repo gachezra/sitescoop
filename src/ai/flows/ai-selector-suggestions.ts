@@ -9,7 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const SuggestSelectorsInputSchema = z.object({
   url: z.string().describe('The URL of the webpage to scrape.'),
@@ -18,11 +18,11 @@ const SuggestSelectorsInputSchema = z.object({
 export type SuggestSelectorsInput = z.infer<typeof SuggestSelectorsInputSchema>;
 
 const SuggestSelectorsOutputSchema = z.object({
-  container: z.string().describe('The CSS selector for the main container of a single item in the list.'),
-  name: z.string().describe('The CSS selector for the product name, relative to the container.'),
-  price: z.string().describe('The CSS selector for the product price, relative to the container.'),
-  rating: z.string().describe('The CSS selector for the product rating, relative to the container.'),
-  imageUrl: z.string().describe('The CSS selector for the product image, relative to the container.'),
+  container: z.string().describe('The CSS selector for the main container of a single item in a list.'),
+  title: z.string().describe('The CSS selector for the item title, relative to the container.'),
+  description: z.string().describe('The CSS selector for the item description, relative to the container.'),
+  link: z.string().describe("The CSS selector for the link to the item's detail page, relative to the container."),
+  imageUrl: z.string().describe('The CSS selector for the item image, relative to the container.'),
 });
 export type SuggestSelectorsOutput = z.infer<typeof SuggestSelectorsOutputSchema>;
 
@@ -34,15 +34,15 @@ const prompt = ai.definePrompt({
   name: 'suggestSelectorsPrompt',
   input: {schema: SuggestSelectorsInputSchema},
   output: {schema: SuggestSelectorsOutputSchema},
-  prompt: `You are an expert web scraper. Given the URL and HTML content of a webpage, suggest CSS selectors to extract product information.
+  prompt: `You are an expert web scraper. Given the URL and HTML content of a webpage, suggest CSS selectors to extract a list of items.
 
-Identify a repeating container element for each product. Then, within that container, find the selectors for the name, price, rating, and image URL.
+Identify a repeating container element for each item. Then, within that container, find the selectors for the title, a description, a link to the item's page, and an image URL.
 
 URL: {{{url}}}
 Content:
 {{{content}}}
 
-Return the selectors as a JSON object with keys "container", "name", "price", "rating", and "imageUrl". The selectors for name, price, rating and imageUrl should be relative to the container.
+Return the selectors as a JSON object with keys "container", "title", "description", "link", and "imageUrl". The selectors for title, description, link and imageUrl should be relative to the container.
 `,
 });
 

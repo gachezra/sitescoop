@@ -1,15 +1,15 @@
 export type Product = {
   id: string;
-  name: string;
-  price: number;
-  rating: number;
+  title: string;
+  description: string;
+  link: string;
   imageUrl: string;
 };
 
 export type SelectorMap = {
   container: string;
-  name: string;
-  price: string;
-  rating: string;
+  title: string;
+  description: string;
+  link: string;
   imageUrl: string;
 };

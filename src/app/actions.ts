@@ -33,13 +33,21 @@ export async function scrapeWebsite(url: string, selectors: SelectorMap): Promis
     
         const scrapedProducts: Product[] = [];
         
-    
         $(selectors.container).each((index, element) => {
-          const name = $(element).find(selectors.name).text().trim();
-          const priceStr = $(element).find(selectors.price).text().trim().replace(/[^0-9.-]+/g, "");
-          const ratingStr = $(element).find(selectors.rating).text().trim().replace(/[^0-9.-]+/g, "");
-          let imageUrl = $(element).find(selectors.imageUrl).attr('src') || $(element).find(selectors.imageUrl).attr('data-src') || '';
+          const title = $(element).find(selectors.title).text().trim();
+          const description = $(element).find(selectors.description).text().trim();
+          
+          let link = $(element).find(selectors.link).attr('href') || '';
+          if (link) {
+            try {
+              link = new URL(link, url).href;
+            } catch (e) {
+                console.warn(`Invalid link URL found: ${link}`);
+                link = '#';
+            }
+          }
 
+          let imageUrl = $(element).find(selectors.imageUrl).attr('src') || $(element).find(selectors.imageUrl).attr('data-src') || '';
           if (imageUrl) {
             try {
                 imageUrl = new URL(imageUrl, url).href;
@@ -49,12 +57,12 @@ export async function scrapeWebsite(url: string, selectors: SelectorMap): Promis
             }
           }
 
-          if (name && priceStr) {
+          if (title) {
             scrapedProducts.push({
-                id: `${index}-${name}`,
-                name,
-                price: parseFloat(priceStr) || 0,
-                rating: parseFloat(ratingStr) || 0,
+                id: `${index}-${title}`,
+                title,
+                description,
+                link,
                 imageUrl: imageUrl || `https://placehold.co/100x100.png`
             });
           }

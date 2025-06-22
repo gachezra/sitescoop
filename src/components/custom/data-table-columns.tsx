@@ -3,9 +3,10 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Product } from "@/types";
-import { ArrowUpDown, Star } from "lucide-react";
+import { ArrowUpDown } from "lucide-react";
 import { Button } from "../ui/button";
 import Image from "next/image";
+import Link from "next/link";
 
 export const columns: ColumnDef<Product>[] = [
   {
@@ -31,79 +32,39 @@ export const columns: ColumnDef<Product>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "name",
+    accessorKey: "title",
     header: ({ column }) => {
         return (
           <Button
             variant="ghost"
             onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
           >
-            Product Name
+            Title
             <ArrowUpDown className="ml-2 h-4 w-4" />
           </Button>
         )
       },
     cell: ({ row }) => {
-        const product = row.original;
+        const item = row.original;
         return (
-            <div className="flex items-center gap-3">
+            <div className="flex items-start gap-4">
                 <Image 
-                    src={product.imageUrl}
-                    alt={product.name}
-                    width={40}
-                    height={40}
-                    className="rounded-md"
-                    data-ai-hint="product image"
+                    src={item.imageUrl}
+                    alt={item.title}
+                    width={60}
+                    height={60}
+                    className="rounded-md object-cover aspect-square"
+                    data-ai-hint="item image"
                 />
-                <span className="font-medium">{product.name}</span>
+                <div className="flex flex-col gap-1">
+                  <Link href={item.link || '#'} target="_blank" rel="noopener noreferrer" className="font-medium hover:underline">
+                    {item.title}
+                  </Link>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+                </div>
             </div>
         )
-    }
-  },
-  {
-    accessorKey: "price",
-    header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Price
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
     },
-    cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("price"));
-        const formatted = new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-        }).format(amount);
-
-        return <div className="text-right font-mono pr-4">{formatted}</div>
-    }
-  },
-  {
-    accessorKey: "rating",
-    header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Rating
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-    },
-    cell: ({ row }) => {
-        const rating = parseFloat(row.getValue("rating"));
-        return (
-            <div className="flex items-center gap-1">
-                <span>{rating.toFixed(1)}</span>
-                <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-            </div>
-        )
-    }
+    size: 60, // Set a larger size for this column
   },
 ];

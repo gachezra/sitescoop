@@ -95,10 +95,10 @@ export function DataTable<TData, TValue>({
         )}
         <div className="flex items-center py-4">
             <Input
-            placeholder="Filter by product name..."
-            value={(table.getColumn('name')?.getFilterValue() as string) ?? ''}
+            placeholder="Filter by title..."
+            value={(table.getColumn('title')?.getFilterValue() as string) ?? ''}
             onChange={(event) =>
-                table.getColumn('name')?.setFilterValue(event.target.value)
+                table.getColumn('title')?.setFilterValue(event.target.value)
             }
             className="max-w-sm"
             />
@@ -136,7 +136,7 @@ export function DataTable<TData, TValue>({
                 <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => {
                     return (
-                        <TableHead key={header.id}>
+                        <TableHead key={header.id} style={{ width: header.getSize() !== 150 ? `${header.getSize()}%` : undefined }}>
                         {header.isPlaceholder
                             ? null
                             : flexRender(
