@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Header from "@/components/custom/header";
 import ScraperForm from "@/components/custom/scraper-form";
 import ProgressIndicator from "@/components/custom/progress-indicator";
@@ -8,7 +8,7 @@ import { performScrape } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types";
 import { DataTable } from "./data-table";
-import { columns } from "./data-table-columns";
+import { generateColumns } from "./data-table-columns";
 import ExportOptions from "./export-options";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
@@ -91,6 +91,8 @@ export default function ScraperClient() {
   };
 
   const isProcessing = state === 'scraping';
+
+  const columns = useMemo(() => generateColumns(scrapedData), [scrapedData]);
 
   return (
     <div className="min-h-screen flex flex-col">
