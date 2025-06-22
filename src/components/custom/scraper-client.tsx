@@ -4,10 +4,9 @@ import { useState } from "react";
 import Header from "@/components/custom/header";
 import ScraperForm from "@/components/custom/scraper-form";
 import ProgressIndicator from "@/components/custom/progress-indicator";
-import SelectorSuggestions from "@/components/custom/selector-suggestions";
-import { getScrapingSuggestions, getSummary, scrapeWebsite } from "@/app/actions";
+import { performScrape } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
-import { Product, SelectorMap } from "@/types";
+import { Product } from "@/types";
 import { DataTable } from "./data-table";
 import { columns } from "./data-table-columns";
 import ExportOptions from "./export-options";
@@ -15,123 +14,90 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "../ui/button";
 
-type ScraperState = 'idle' | 'suggesting' | 'selecting' | 'scraping' | 'results' | 'error';
+type ScraperState = 'idle' | 'scraping' | 'results' | 'error';
 
 export default function ScraperClient() {
   const [state, setState] = useState<ScraperState>("idle");
   const [url, setUrl] = useState("");
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState("");
-  const [suggestedSelectors, setSuggestedSelectors] = useState<SelectorMap | null>(null);
   const [scrapedData, setScrapedData] = useState<Product[]>([]);
   const [summary, setSummary] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState("");
 
   const { toast } = useToast();
 
-  const handleGetSuggestions = async (scrapeUrl: string) => {
+  const handleScrape = async (scrapeUrl: string) => {
     setUrl(scrapeUrl);
-    setState('suggesting');
+    setState('scraping');
     setProgress(0);
     setStatusMessage("Initializing scraping engine...");
     setScrapedData([]);
-    setSuggestedSelectors(null);
     setSummary('');
     setErrorMessage('');
 
     const progressInterval = setInterval(() => {
-        setProgress(p => Math.min(p + 10, 90));
+        setProgress(p => Math.min(p + 5, 95));
     }, 500);
 
     try {
-      setStatusMessage("Fetching page content...");
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setStatusMessage("Analyzing page and getting AI suggestions...");
-      const selectors = await getScrapingSuggestions(scrapeUrl);
+      setStatusMessage("Fetching page and analyzing content with AI...");
+      const result = await performScrape(scrapeUrl);
       clearInterval(progressInterval);
-      setProgress(100);
 
-      if (selectors) {
-        setSuggestedSelectors(selectors);
-        setState('selecting');
-      } else {
-        setErrorMessage("Could not get AI suggestions for this URL. It might be protected or inaccessible. Please try another URL.");
+      if (result.error) {
+        setErrorMessage(result.error);
         setState('error');
         toast({
           variant: "destructive",
-          title: "AI Error",
-          description: "Failed to generate CSS selectors.",
+          title: "Scraping Failed",
+          description: result.error,
         });
+        return;
       }
+      
+      if(result.data && result.summary) {
+        setScrapedData(result.data);
+        setSummary(result.summary);
+        setProgress(100);
+        setStatusMessage("Scraping complete!");
+        setState('results');
+      } else {
+        setErrorMessage("Scraping finished, but returned no data or summary.");
+        setState('error');
+      }
+
     } catch (error) {
       clearInterval(progressInterval);
       console.error(error);
-      setErrorMessage("An unexpected error occurred while fetching suggestions.");
+      const message = error instanceof Error ? error.message : "An unknown error occurred.";
+      setErrorMessage(message);
       setState('error');
       toast({
         variant: "destructive",
         title: "Scraping Failed",
-        description: "An unexpected error occurred during scraping.",
+        description: message,
       });
-    }
-  };
-
-  const handleConfirmAndScrape = async (selectors: SelectorMap) => {
-    setState('scraping');
-    setStatusMessage("Extracting data with selected selectors...");
-    setProgress(0);
-    setSuggestedSelectors(selectors); // Store edited selectors
-
-    const progressInterval = setInterval(() => {
-        setProgress(p => Math.min(p + 5, 90));
-    }, 400);
-
-    try {
-        const data = await scrapeWebsite(url, selectors);
-        clearInterval(progressInterval);
-
-        if (data.length === 0) {
-            setErrorMessage("Scraping completed, but no data was found with the provided selectors. You can go back and adjust them.");
-            setState('error'); 
-            return;
-        }
-
-        setScrapedData(data);
-        
-        setStatusMessage("Generating AI summary...");
-        const dataSummary = await getSummary(JSON.stringify(data.slice(0, 5)), url);
-        setSummary(dataSummary);
-
-        setProgress(100);
-        setStatusMessage("Scraping complete!");
-        setState('results');
-
-    } catch (error) {
-        clearInterval(progressInterval);
-        console.error("Scraping error:", error);
-        setErrorMessage("An error occurred during the final scraping process.");
-        setState('error');
     }
   };
     
   const handleStartNewScrape = () => {
     setState('idle');
     setScrapedData([]);
-    setSuggestedSelectors(null);
     setUrl("");
     setProgress(0);
     setStatusMessage("");
     setErrorMessage("");
   };
 
-  const isProcessing = ['suggesting', 'scraping'].includes(state);
+  const isProcessing = state === 'scraping';
 
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
       <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
         <div className="space-y-8">
-            <ScraperForm onScrape={handleGetSuggestions} isScraping={isProcessing} />
+            <ScraperForm onScrape={handleScrape} isScraping={isProcessing} />
 
             {state === 'error' && (
                 <Alert variant="destructive">
@@ -140,25 +106,14 @@ export default function ScraperClient() {
                     <AlertDescription className="flex items-center justify-between">
                         {errorMessage}
                         <div>
-                        {suggestedSelectors && (
-                             <Button variant="link" onClick={() => setState('selecting')} className="p-0 h-auto ml-2">Adjust Selectors</Button>
-                        )}
-                        <Button variant="link" onClick={handleStartNewScrape} className="p-0 h-auto ml-2">Try Again</Button>
+                          <Button variant="link" onClick={handleStartNewScrape} className="p-0 h-auto ml-2">Try Again</Button>
                         </div>
                     </AlertDescription>
                 </Alert>
             )}
 
-            {(state === 'suggesting' || state === 'scraping') && (
+            {state === 'scraping' && (
                 <ProgressIndicator progress={progress} message={statusMessage} />
-            )}
-
-            {state === 'selecting' && suggestedSelectors && (
-                <SelectorSuggestions 
-                    suggestions={suggestedSelectors} 
-                    onConfirm={handleConfirmAndScrape}
-                    isScraping={state === 'scraping'}
-                />
             )}
 
             {state === 'results' && scrapedData.length > 0 && (
