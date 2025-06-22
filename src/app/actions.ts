@@ -2,6 +2,7 @@
 
 import { suggestSelectors } from '@/ai/flows/ai-selector-suggestions';
 import { summarizeData } from '@/ai/flows/data-summarization';
+import { cleanData } from '@/ai/flows/data-cleaning';
 import type { Product } from '@/types';
 import * as cheerio from 'cheerio';
 
@@ -79,5 +80,31 @@ export async function performScrape(url: string): Promise<{
     } catch (error) {
         console.error("Error performing scrape:", error);
         return { error: "An unexpected error occurred. Please check the console for details." };
+    }
+}
+
+
+export async function performDataCleaning(data: Product[]): Promise<{
+    cleanedData?: Product[];
+    error?: string;
+}> {
+    if (!data || data.length === 0) {
+        return { error: "No data provided to clean." };
+    }
+    try {
+        const dataString = JSON.stringify(data);
+        const result = await cleanData({ data: dataString });
+        
+        if (!result.cleanedData) {
+            return { error: "AI cleaning failed to return data." };
+        }
+
+        const cleanedData = JSON.parse(result.cleanedData);
+        return { cleanedData };
+
+    } catch (error) {
+        console.error("Error performing data cleaning:", error);
+        const message = error instanceof Error ? error.message : "An unexpected error occurred during cleaning.";
+        return { error: message };
     }
 }

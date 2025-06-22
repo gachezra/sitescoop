@@ -18,9 +18,10 @@ type PaymentModalProps = {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   feature: string;
+  onSuccessfulPayment: () => void;
 };
 
-export default function PaymentModal({ isOpen, setIsOpen, feature }: PaymentModalProps) {
+export default function PaymentModal({ isOpen, setIsOpen, feature, onSuccessfulPayment }: PaymentModalProps) {
   const [phone, setPhone] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
@@ -40,14 +41,9 @@ export default function PaymentModal({ isOpen, setIsOpen, feature }: PaymentModa
     // Simulate STK push
     await new Promise((resolve) => setTimeout(resolve, 3000));
 
-    // Simulate success
+    // On success, call the callback from the parent
+    onSuccessfulPayment();
     setIsProcessing(false);
-    setIsOpen(false);
-    toast({
-      title: 'Payment Successful!',
-      description: `You have unlocked ${feature} export. Your download will start shortly.`,
-      className: 'bg-green-500 text-white',
-    });
   };
 
   return (
@@ -56,7 +52,7 @@ export default function PaymentModal({ isOpen, setIsOpen, feature }: PaymentModa
         <DialogHeader>
           <DialogTitle>Unlock Premium Feature</DialogTitle>
           <DialogDescription>
-            Pay KSH 20 via M-Pesa to unlock the <strong>{feature} Export</strong>.
+            Pay KSH 20 via M-Pesa to unlock the <strong>{feature}</strong>.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">

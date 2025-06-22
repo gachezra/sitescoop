@@ -38,13 +38,15 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   summary: string;
   onNewScrape: () => void;
+  isProcessing?: boolean;
 }
 
 export function DataTable<TData, TValue>({
   columns,
   data,
   summary,
-  onNewScrape
+  onNewScrape,
+  isProcessing
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
@@ -80,7 +82,7 @@ export function DataTable<TData, TValue>({
                 {table.getFilteredRowModel().rows.length} row(s) selected.
                 </CardDescription>
             </div>
-            <Button onClick={onNewScrape} variant="outline">
+            <Button onClick={onNewScrape} variant="outline" disabled={isProcessing}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 New Scrape
             </Button>

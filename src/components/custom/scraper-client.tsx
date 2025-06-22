@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Header from "@/components/custom/header";
 import ScraperForm from "@/components/custom/scraper-form";
 import ProgressIndicator from "@/components/custom/progress-indicator";
-import { performScrape } from "@/app/actions";
+import { performScrape, performDataCleaning } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Product } from "@/types";
 import { DataTable } from "./data-table";
@@ -24,6 +24,7 @@ export default function ScraperClient() {
   const [scrapedData, setScrapedData] = useState<Product[]>([]);
   const [summary, setSummary] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState("");
+  const [isCleaning, setIsCleaning] = useState(false);
 
   const { toast } = useToast();
 
@@ -80,6 +81,51 @@ export default function ScraperClient() {
       });
     }
   };
+
+  const handleCleanData = async () => {
+    if (scrapedData.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No Data",
+            description: "There is no data to clean.",
+        });
+        return;
+    }
+
+    setIsCleaning(true);
+    toast({
+        title: "AI Cleaning in Progress",
+        description: "Please wait while our AI cleans your data...",
+    });
+
+    try {
+        const result = await performDataCleaning(scrapedData);
+
+        if (result.error) {
+            toast({
+                variant: "destructive",
+                title: "Cleaning Failed",
+                description: result.error,
+            });
+        } else if (result.cleanedData) {
+            setScrapedData(result.cleanedData);
+            toast({
+                title: "Data Cleaned Successfully!",
+                description: "The data table has been updated.",
+                className: 'bg-green-500 text-white',
+            });
+        }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "An unknown error occurred.";
+        toast({
+            variant: "destructive",
+            title: "Cleaning Failed",
+            description: message,
+        });
+    } finally {
+        setIsCleaning(false);
+    }
+  };
     
   const handleStartNewScrape = () => {
     setState('idle');
@@ -90,7 +136,7 @@ export default function ScraperClient() {
     setErrorMessage("");
   };
 
-  const isProcessing = state === 'scraping';
+  const isProcessing = state === 'scraping' || isCleaning;
 
   const columns = useMemo(() => generateColumns(scrapedData), [scrapedData]);
 
@@ -125,8 +171,13 @@ export default function ScraperClient() {
                         data={scrapedData} 
                         summary={summary} 
                         onNewScrape={handleStartNewScrape}
+                        isProcessing={isProcessing}
                     />
-                    <ExportOptions data={scrapedData} />
+                    <ExportOptions 
+                      data={scrapedData} 
+                      onCleanData={handleCleanData}
+                      isCleaning={isCleaning}
+                    />
                 </div>
             )}
         </div>
