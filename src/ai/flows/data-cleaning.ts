@@ -12,7 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
 const CleanDataInputSchema = z.object({
-  contentType: z.string().describe("The type of content being cleaned. Can be 'text', 'links', or 'images'."),
+  contentType: z.string().describe("The type of content being cleaned. Can be 'text', 'links', 'images', or 'tables'."),
   rawData: z
     .string()
     .describe('The raw scraped data as a string. This could be a block of text, a JSON array of URLs, etc.'),
@@ -22,7 +22,7 @@ export type CleanDataInput = z.infer<typeof CleanDataInputSchema>;
 const CleanDataOutputSchema = z.object({
   cleanedData: z
     .string()
-    .describe('The cleaned data as a string. Should be in the same basic format as the input (e.g., text, or a JSON array string for links/images).'),
+    .describe('The cleaned data as a string. Should be in the same basic format as the input (e.g., text, or a JSON array string for links/images/tables).'),
 });
 export type CleanDataOutput = z.infer<typeof CleanDataOutputSchema>;
 
@@ -55,6 +55,11 @@ const prompt = ai.definePrompt({
   - Remove any duplicates.
   - Remove any invalid URLs or placeholders (e.g., 1x1 pixel trackers, base64 encoded tiny images).
   - Return a JSON string array of the cleaned, unique image URLs.
+- **If contentType is 'tables':**
+  - The input is a JSON string representing an array of tables (string[][][]).
+  - Clean the text within each cell (e.g., remove excess whitespace, fix typos).
+  - Do NOT alter the structure (number of tables, rows, or columns).
+  - Return a JSON string in the exact same string[][][] format.
 
 Return the result as a string in the 'cleanedData' field.
 

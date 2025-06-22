@@ -29,15 +29,26 @@ export default function ExportOptions({ data, onCleanData, isCleaning }: ExportO
 
   const convertToText = (dataToConvert: ScrapedData): string => {
     if (!dataToConvert || !dataToConvert.data) return '';
+    
+    if (dataToConvert.contentType === 'tables') {
+      const tables = dataToConvert.data as string[][][];
+      return tables.map(table => 
+        table.map(row => 
+          row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
+        ).join('\n')
+      ).join('\n\n');
+    }
+
     if (Array.isArray(dataToConvert.data)) {
       return dataToConvert.data.join('\n');
     }
-    return dataToConvert.data;
+    return String(dataToConvert.data);
   };
 
   const handleDownload = () => {
     const textData = convertToText(data);
-    const blob = new Blob([textData], { type: 'text/plain;charset=utf-8;' });
+    const fileType = data.contentType === 'text' ? 'text/plain;charset=utf-8;' : 'text/csv;charset=utf-8;';
+    const blob = new Blob([textData], { type: fileType });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     const fileExtension = data.contentType === 'text' ? 'txt' : 'csv';
@@ -77,7 +88,7 @@ export default function ExportOptions({ data, onCleanData, isCleaning }: ExportO
           <Button variant="outline" size="lg" className="flex-col h-24" onClick={handleDownload}>
             <Download className="h-8 w-8 mb-2" />
             <span className="font-semibold">Download Data</span>
-            <span className="text-xs text-muted-foreground">.txt or .csv file</span>
+            <span className="text-xs text-muted-foreground">.{data.contentType === 'text' ? 'txt' : 'csv'} file</span>
           </Button>
           <Button variant="outline" size="lg" className="flex-col h-24" onClick={handleEmail}>
             <Mail className="h-8 w-8 mb-2" />

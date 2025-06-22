@@ -6,13 +6,13 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormMessage, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ArrowRight, Search, Zap, Shield,Gauge, FileText, Link, Image } from "lucide-react";
+import { ArrowRight, Search, Zap, Shield,Gauge, FileText, Link, Image, Table } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formSchema = z.object({
   url: z.string().url({ message: "Please enter a valid URL." }),
-  contentType: z.enum(['text', 'links', 'images'], { required_error: "Please select a content type."}),
+  contentType: z.enum(['text', 'links', 'images', 'tables'], { required_error: "Please select a content type."}),
 });
 
 type ScraperFormProps = {
@@ -91,6 +91,7 @@ export default function ScraperForm({ onScrape, isScraping }: ScraperFormProps) 
                             <SelectItem value="text"><FileText className="inline-block mr-2 h-4 w-4" />All Text</SelectItem>
                             <SelectItem value="links"><Link className="inline-block mr-2 h-4 w-4" />All Links</SelectItem>
                             <SelectItem value="images"><Image className="inline-block mr-2 h-4 w-4" />All Images</SelectItem>
+                            <SelectItem value="tables"><Table className="inline-block mr-2 h-4 w-4" />All Tables</SelectItem>
                         </SelectContent>
                     </Select>
                   <FormMessage />

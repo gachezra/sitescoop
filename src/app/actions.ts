@@ -4,7 +4,7 @@ import { cleanData } from '@/ai/flows/data-cleaning';
 import * as cheerio from 'cheerio';
 import { z } from 'zod';
 
-export type ContentType = 'text' | 'links' | 'images';
+export type ContentType = 'text' | 'links' | 'images' | 'tables';
 
 export type ScrapedData = {
     contentType: ContentType,
@@ -46,6 +46,25 @@ export async function extractContent(url: string, contentType: ContentType): Pro
                  extractedData = Array.from(new Set($('img').map((i, el) => $(el).attr('src')).get()
                     .map(src => src ? new URL(src, url).href : '')
                     .filter(src => src && (src.startsWith('http://') || src.startsWith('https://')))));
+                break;
+            case 'tables':
+                const tablesData: string[][][] = [];
+                $('table').each((i, tableElem) => {
+                    const table: string[][] = [];
+                    $(tableElem).find('tr').each((j, rowElem) => {
+                        const row: string[] = [];
+                        $(rowElem).find('th, td').each((k, cellElem) => {
+                            row.push($(cellElem).text().trim());
+                        });
+                        if (row.length > 0) {
+                            table.push(row);
+                        }
+                    });
+                    if (table.length > 0) {
+                        tablesData.push(table);
+                    }
+                });
+                extractedData = tablesData;
                 break;
             default:
                 return { error: 'Invalid content type specified.' };

@@ -73,6 +73,26 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
             })}
           </div>
         );
+      case 'tables':
+        return (
+          <div className="max-h-[600px] overflow-y-auto space-y-6 p-1">
+            {(data as string[][][]).map((table, tableIndex) => (
+              <div key={tableIndex} className="overflow-x-auto rounded-md border">
+                <table className="w-full text-sm table-auto">
+                  <tbody>
+                    {table.map((row, rowIndex) => (
+                      <tr key={rowIndex} className="border-b last:border-b-0 bg-white/5 even:bg-white/10">
+                        {row.map((cell, cellIndex) => (
+                          <td key={cellIndex} className="p-2 align-top border-r last:border-r-0">{cell}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        );
       default:
         return <p>Unsupported content type.</p>;
     }
@@ -83,6 +103,7 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
         case 'text': return "Extracted Text Content";
         case 'links': return "Extracted Links";
         case 'images': return "Extracted Images";
+        case 'tables': return "Extracted Tables";
         default: return "Extraction Results"
     }
   }
@@ -92,6 +113,7 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
         case 'text': return `Found ${data.length.toLocaleString()} characters.`;
         case 'links': return `Found ${(data as string[]).length.toLocaleString()} links.`;
         case 'images': return `Found ${(data as string[]).length.toLocaleString()} images.`;
+        case 'tables': return `Found ${(data as string[][][]).length.toLocaleString()} tables.`;
         default: return "Your extracted data is ready."
     }
   }
