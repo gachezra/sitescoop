@@ -1,45 +1,72 @@
-
 'use server';
 
 import { suggestSelectors } from '@/ai/flows/ai-selector-suggestions';
 import { summarizeData } from '@/ai/flows/data-summarization';
+import type { SelectorMap, Product } from '@/types';
+import * as cheerio from 'cheerio';
 
-export async function getScrapingSuggestions(url: string): Promise<string[]> {
+export async function getScrapingSuggestions(url: string): Promise<SelectorMap | null> {
   try {
-    // In a real application, you would fetch the URL's content.
-    // For this demo, we'll use mock HTML content.
-    const mockHtmlContent = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <title>Mock E-commerce</title>
-      </head>
-      <body>
-        <div class="product-list">
-          <div class="product-item">
-            <img src="https://placehold.co/200x200.png" alt="Product 1" class="product-image">
-            <h2 class="product-title">Smartwatch</h2>
-            <p class="product-price">$199.99</p>
-            <span class="product-rating">4.5</span>
-          </div>
-          <div class="product-item">
-            <img src="https://placehold.co/200x200.png" alt="Product 2" class="product-image">
-            <h2 class="product-title">Wireless Headphones</h2>
-            <p class="product-price">$89.99</p>
-            <span class="product-rating">4.8</span>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
+    const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' } });
+    if (!response.ok) {
+      console.error(`Error fetching URL: ${response.statusText}`);
+      return null;
+    }
+    const htmlContent = await response.text();
 
-    const result = await suggestSelectors({ url, content: mockHtmlContent });
-    return result.selectors;
+    const result = await suggestSelectors({ url, content: htmlContent });
+    return result;
   } catch (error) {
     console.error("Error getting selector suggestions:", error);
-    return [];
+    return null;
   }
 }
+
+export async function scrapeWebsite(url: string, selectors: SelectorMap): Promise<Product[]> {
+    try {
+        const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' } });
+        if (!response.ok) {
+          throw new Error(`Failed to fetch page: ${response.status}`);
+        }
+        const html = await response.text();
+        const $ = cheerio.load(html);
+    
+        const scrapedProducts: Product[] = [];
+        
+    
+        $(selectors.container).each((index, element) => {
+          const name = $(element).find(selectors.name).text().trim();
+          const priceStr = $(element).find(selectors.price).text().trim().replace(/[^0-9.-]+/g, "");
+          const ratingStr = $(element).find(selectors.rating).text().trim().replace(/[^0-9.-]+/g, "");
+          let imageUrl = $(element).find(selectors.imageUrl).attr('src') || $(element).find(selectors.imageUrl).attr('data-src') || '';
+
+          if (imageUrl) {
+            try {
+                imageUrl = new URL(imageUrl, url).href;
+            } catch (e) {
+                console.warn(`Invalid image URL found: ${imageUrl}`);
+                imageUrl = `https://placehold.co/100x100.png`;
+            }
+          }
+
+          if (name && priceStr) {
+            scrapedProducts.push({
+                id: `${index}-${name}`,
+                name,
+                price: parseFloat(priceStr) || 0,
+                rating: parseFloat(ratingStr) || 0,
+                imageUrl: imageUrl || `https://placehold.co/100x100.png`
+            });
+          }
+        });
+    
+        return scrapedProducts;
+    } catch (error) {
+        console.error("Error scraping website:", error);
+        return [];
+    }
+}
+
 
 export async function getSummary(data: string, url: string): Promise<string> {
     try {

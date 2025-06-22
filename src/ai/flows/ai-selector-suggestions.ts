@@ -18,9 +18,11 @@ const SuggestSelectorsInputSchema = z.object({
 export type SuggestSelectorsInput = z.infer<typeof SuggestSelectorsInputSchema>;
 
 const SuggestSelectorsOutputSchema = z.object({
-  selectors: z
-    .array(z.string())
-    .describe('An array of suggested CSS selectors for scraping.'),
+  container: z.string().describe('The CSS selector for the main container of a single item in the list.'),
+  name: z.string().describe('The CSS selector for the product name, relative to the container.'),
+  price: z.string().describe('The CSS selector for the product price, relative to the container.'),
+  rating: z.string().describe('The CSS selector for the product rating, relative to the container.'),
+  imageUrl: z.string().describe('The CSS selector for the product image, relative to the container.'),
 });
 export type SuggestSelectorsOutput = z.infer<typeof SuggestSelectorsOutputSchema>;
 
@@ -32,15 +34,15 @@ const prompt = ai.definePrompt({
   name: 'suggestSelectorsPrompt',
   input: {schema: SuggestSelectorsInputSchema},
   output: {schema: SuggestSelectorsOutputSchema},
-  prompt: `You are an expert web scraper. Given the URL and HTML content of a webpage, suggest CSS selectors that can be used to extract meaningful data from the page.
+  prompt: `You are an expert web scraper. Given the URL and HTML content of a webpage, suggest CSS selectors to extract product information.
+
+Identify a repeating container element for each product. Then, within that container, find the selectors for the name, price, rating, and image URL.
 
 URL: {{{url}}}
 Content:
 {{{content}}}
 
-Suggest at least 3 CSS selectors.
-
-Return the selectors as a JSON array of strings.
+Return the selectors as a JSON object with keys "container", "name", "price", "rating", and "imageUrl". The selectors for name, price, rating and imageUrl should be relative to the container.
 `,
 });
 

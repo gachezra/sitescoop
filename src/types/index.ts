@@ -5,3 +5,11 @@ export type Product = {
   rating: number;
   imageUrl: string;
 };
+
+export type SelectorMap = {
+  container: string;
+  name: string;
+  price: string;
+  rating: string;
+  imageUrl: string;
+};
