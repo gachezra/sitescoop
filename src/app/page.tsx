@@ -1,3 +1,9 @@
+import ScraperClient from "@/components/custom/scraper-client";
+
 export default function Home() {
-  return <></>;
+  return (
+    <main>
+      <ScraperClient />
+    </main>
+  );
 }
