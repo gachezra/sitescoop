@@ -124,14 +124,14 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
                   <TabsTrigger value="json"><Code className="mr-2 h-4 w-4" />JSON View</TabsTrigger>
                 </TabsList>
               </Tabs>
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline">
                     <Filter className="mr-2 h-4 w-4" />
                     Showing {selectedTables.length} of {allTables.length} tables
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56">
+                <DropdownMenuContent className="w-56 max-h-96">
                   <DropdownMenuLabel>Visible Tables</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onSelect={handleSelectAll}>Select All</DropdownMenuItem>
