@@ -11,6 +11,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -26,14 +27,17 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
   const { contentType, data, url } = scrapedData;
 
   const [viewMode, setViewMode] = useState<'table' | 'json'>('table');
-  const initialSelectedTables = useMemo(() => {
+  
+  const allTables = useMemo(() => {
     if (contentType === 'tables' && Array.isArray(data)) {
-      return Array.from({ length: data.length }, (_, i) => i);
+      return data as string[][][];
     }
     return [];
   }, [contentType, data]);
 
-  const [selectedTables, setSelectedTables] = useState<number[]>(initialSelectedTables);
+  const allTableIndexes = useMemo(() => Array.from({ length: allTables.length }, (_, i) => i), [allTables]);
+  
+  const [selectedTables, setSelectedTables] = useState<number[]>(allTableIndexes);
 
   const handleTableSelectionChange = (index: number) => {
     setSelectedTables(prev => 
@@ -42,13 +46,16 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
         : [...prev, index].sort((a, b) => a - b)
     );
   };
+
+  const handleSelectAll = () => setSelectedTables(allTableIndexes);
+  const handleSelectNone = () => setSelectedTables([]);
   
   const filteredTableData = useMemo(() => {
-    if (contentType !== 'tables' || !Array.isArray(data)) {
+    if (contentType !== 'tables') {
       return [];
     }
-    return data.filter((_, index) => selectedTables.includes(index));
-  }, [data, selectedTables, contentType]);
+    return allTables.filter((_, index) => selectedTables.includes(index));
+  }, [allTables, selectedTables, contentType]);
 
 
   const renderContent = () => {
@@ -108,7 +115,6 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
           </div>
         );
       case 'tables':
-        const allTables = data as string[][][];
         return (
           <div>
             <div className="flex flex-wrap gap-4 justify-between items-center mb-4">
@@ -127,6 +133,9 @@ export default function ResultsView({ scrapedData, onNewScrape, isProcessing }: 
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56">
                   <DropdownMenuLabel>Visible Tables</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={handleSelectAll}>Select All</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={handleSelectNone}>Select None</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {allTables.map((_, index) => (
                      <DropdownMenuCheckboxItem
