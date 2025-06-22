@@ -5,6 +5,7 @@ import { summarizeData } from '@/ai/flows/data-summarization';
 import { cleanData } from '@/ai/flows/data-cleaning';
 import type { Product } from '@/types';
 import * as cheerio from 'cheerio';
+import { z } from 'zod';
 
 export async function performScrape(url: string): Promise<{
     data?: Product[];
@@ -30,12 +31,18 @@ export async function performScrape(url: string): Promise<{
         const $ = cheerio.load(htmlContent);
         const scrapedProducts: Product[] = [];
         
-        $(selectors.container).each((index, element) => {
-          const title = $(element).find(selectors.title).text().trim();
-          const description = $(element).find(selectors.description).text().trim();
-          const date = selectors.date ? $(element).find(selectors.date).text().trim() : undefined;
+        const containerElements = $(selectors.container);
+        
+        if (containerElements.length === 0) {
+            return { error: "The AI suggested a container selector, but it didn't match any elements on the page. The website might rely on JavaScript to load its content." };
+        }
+
+        containerElements.each((index, element) => {
+          const title = $(element).find(selectors.title).first().text().trim();
+          const description = $(element).find(selectors.description).first().text().trim();
+          const date = selectors.date ? $(element).find(selectors.date).first().text().trim() : undefined;
           
-          let link = $(element).find(selectors.link).attr('href') || '';
+          let link = $(element).find(selectors.link).first().attr('href') || '';
           if (link) {
             try {
               link = new URL(link, url).href;
@@ -45,7 +52,7 @@ export async function performScrape(url: string): Promise<{
             }
           }
 
-          let imageUrl = $(element).find(selectors.imageUrl).attr('src') || $(element).find(selectors.imageUrl).attr('data-src') || '';
+          let imageUrl = $(element).find(selectors.imageUrl).first().attr('src') || $(element).find(selectors.imageUrl).first().attr('data-src') || '';
           if (imageUrl) {
             try {
                 imageUrl = new URL(imageUrl, url).href;
@@ -57,7 +64,7 @@ export async function performScrape(url: string): Promise<{
 
           if (title) {
             scrapedProducts.push({
-                id: `${index}-${title}`,
+                id: `${index}-${title.slice(0, 20)}`,
                 title,
                 description,
                 link,
@@ -79,6 +86,9 @@ export async function performScrape(url: string): Promise<{
 
     } catch (error) {
         console.error("Error performing scrape:", error);
+        if (error instanceof z.ZodError) {
+            return { error: `AI selector validation failed: ${error.errors.map(e => e.message).join(', ')}` };
+        }
         return { error: "An unexpected error occurred. Please check the console for details." };
     }
 }
