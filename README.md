@@ -2,7 +2,7 @@
 
 Instantly extract text, links, images, and tables from any website. SiteScoop is a sleek, no-login-required web scraping tool designed for simplicity and power.
 
-<img src="https://placehold.co/800x450.png" alt="SiteScoop Screenshot" data-ai-hint="app screenshot" />
+<img src="./scrnshts/Screenshot.png" alt="SiteScoop Screenshot" data-ai-hint="app screenshot" />
 
 ---
 
@@ -83,5 +83,3 @@ Make sure you have Node.js and npm installed on your machine.
     *   (Optional) Use the premium "Clean with AI" feature to automatically process and format your data.
 
 ---
-
-*This project was generated in Firebase Studio.*
